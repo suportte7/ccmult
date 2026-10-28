@@ -3,7 +3,7 @@
 // ============================================
 const CONFIG = {
   // Cole aqui a URL do Apps Script publicado como Web App
-  API_URL: 'https://script.google.com/macros/s/AKfycbwcZSNhLb3HrgVJGFUTHeNWy7hF7Xu0w10RsnRm8ihLSWpZXR295JPoUYVhtPKkSZA_CQ/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbzb1SJrRb4MGLsfuRlZphRSYvlUjnuHbur5kLEtV_Sd8xndaKKX7b4zYiUfZ9FoS39ZLg/exec',
 
   CATEGORIAS: [
     'Alimentação','Transporte','Saúde','Educação',
