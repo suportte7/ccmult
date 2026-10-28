@@ -1,117 +1,160 @@
-// ============================================
-// cartoes.js
-// ============================================
-const CARTOES = {
-  render(cartoes) {
-    const content = document.getElementById('appContent');
-    content.innerHTML = `
-      <div class="section-header">
-        <h2>Meus Cartões</h2>
-        <button class="btn-primary btn-small" id="btnAddCartao">
-          <i class="fas fa-plus"></i> Novo
-        </button>
-      </div>
-      <div id="listaCartoes"></div>
-    `;
-    document.getElementById('btnAddCartao').onclick = () => this.formCartao();
-    this.renderLista(cartoes);
-  },
+function renderCartoes(el) {
+  el.innerHTML = `
+    <div class="page-header">
+      <h2>Cartões</h2>
+      <p>${Dados.cartoes.length} cartão(ões) cadastrado(s)</p>
+    </div>
+    <div id="listaCartoes">${listarCartoes()}</div>
+  `;
+  // FAB
+  let fab = document.getElementById('fab');
+  if (!fab) {
+    fab = document.createElement('button');
+    fab.className = 'fab';
+    fab.id = 'fab';
+    document.body.appendChild(fab);
+  }
+  fab.innerHTML = '+';
+  fab.onclick = () => modalCartao();
+}
 
-  renderLista(cartoes) {
-    const lista = document.getElementById('listaCartoes');
-    if (!cartoes.length) {
-      lista.innerHTML = `<div class="section-empty"><i class="fas fa-credit-card"></i><p>Nenhum cartão ainda</p></div>`;
-      return;
-    }
-    lista.innerHTML = cartoes.map(c => `
-      <div class="cc-visual" style="background:linear-gradient(135deg,${UI.corCartao(c.cor)},${UI.corCartao(c.cor)}cc)">
-        <div class="cc-nome">${c.nome}</div>
-        <div class="cc-numero">**** **** **** ${String(c.numero).slice(-4)}</div>
-        <div class="cc-info">
-          <span>Vence dia ${c.vencimento}</span>
-          <span>Corte dia ${c.diaCorte || '-'}</span>
+function listarCartoes() {
+  if (!Dados.cartoes.length) return '<p class="vazio">Nenhum cartão cadastrado.</p>';
+  return Dados.cartoes.map(c => `
+    <div class="tree-card">
+      <div class="tree-header" onclick="this.parentElement.classList.toggle('open')">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:10px;height:10px;border-radius:50%;background:${c.cor || '#6366f1'};flex-shrink:0"></div>
+          <div class="t-desc">
+            <strong>${c.nome}</strong>
+            <span>**** ${c.numero ? String(c.numero).slice(-4) : '0000'} · Vence dia ${c.vencimento || '-'}</span>
+          </div>
         </div>
-        <div class="cc-limite">Limite ${UI.moeda(c.limite)}</div>
-        <div style="position:absolute;bottom:12px;right:12px;display:flex;gap:8px">
-          <button class="btn-icon" onclick="CARTOES.formCartao(${JSON.stringify(c).replace(/"/g,'&quot;')})">
-            <i class="fas fa-edit"></i>
-          </button>
-          <button class="btn-icon" onclick="CARTOES.deletar('${c.id}','${c.nome}')">
-            <i class="fas fa-trash"></i>
-          </button>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:0.8rem;font-weight:700;color:var(--success)">${fmt(c.limite)}</span>
+          <span class="material-icons-outlined" style="font-size:1rem;color:var(--text-light)">expand_more</span>
         </div>
       </div>
-    `).join('');
-  },
+      <div class="tree-body">
+        <div style="display:flex;gap:8px;padding:4px 0">
+          <div class="metric" style="flex:1">
+            <small>Limite</small>
+            <strong>${fmt(c.limite)}</strong>
+          </div>
+          <div class="metric" style="flex:1">
+            <small>Vencimento</small>
+            <strong>Dia ${c.vencimento || '-'}</strong>
+          </div>
+          <div class="metric" style="flex:1">
+            <small>Corte</small>
+            <strong>Dia ${c.diaCorte || '-'}</strong>
+          </div>
+        </div>
+        <div class="modal-acoes" style="margin-top:8px">
+          <button class="btn-sec" onclick="modalCartao('${c.id}')">
+            <span class="material-icons-outlined" style="font-size:0.9rem;vertical-align:middle">edit</span>
+            Editar
+          </button>
+          <button class="btn-danger" onclick="deletarCartao('${c.id}')">
+            <span class="material-icons-outlined" style="font-size:0.9rem;vertical-align:middle">delete</span>
+            Excluir
+          </button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
 
-  formCartao(c = null) {
-    const edit = !!c;
-    UI.modal(edit ? 'Editar Cartão' : 'Novo Cartão', `
-      <div class="form-group">
+function modalCartao(id = null) {
+  const c = id ? Dados.cartoes.find(x => x.id === id) : null;
+  const cores = gerarCores();
+  const corAtual = c ? c.cor : cores[0];
+  const pickers = cores.map(cor => `
+    <div class="cor-op ${cor === corAtual ? 'sel' : ''}"
+      style="background:${cor}"
+      onclick="document.querySelectorAll('.cor-op').forEach(x=>x.classList.remove('sel'));this.classList.add('sel');document.getElementById('fCartaoCor').value='${cor}'">
+    </div>
+  `).join('');
+
+  abrirModal(
+    c ? 'Editar Cartão' : 'Novo Cartão',
+    `
+      <div class="f-group">
         <label>Nome do Cartão</label>
-        <input id="cNome" type="text" value="${c ? c.nome : ''}" placeholder="Ex: Nubank">
+        <input type="text" id="fCartaoNome" value="${c ? c.nome : ''}" placeholder="Ex: Nubank">
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Número (últimos 4 dígitos)</label>
-          <input id="cNumero" type="number" value="${c ? c.numero : ''}" placeholder="1234" maxlength="4">
+      <div class="f-row">
+        <div class="f-group">
+          <label>Últimos 4 dígitos</label>
+          <input type="tel" id="fCartaoNumero" maxlength="4" value="${c ? c.numero : ''}" placeholder="0000">
         </div>
-        <div class="form-group">
+        <div class="f-group">
           <label>Limite (R$)</label>
-          <input id="cLimite" type="number" value="${c ? c.limite : ''}" placeholder="5000">
+          <input type="number" id="fCartaoLimite" value="${c ? c.limite : ''}" placeholder="0,00">
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
+      <div class="f-row">
+        <div class="f-group">
           <label>Dia Vencimento</label>
-          <input id="cVenc" type="number" value="${c ? c.vencimento : ''}" placeholder="15" min="1" max="31">
+          <input type="number" id="fCartaoVenc" min="1" max="31" value="${c ? c.vencimento : ''}" placeholder="10">
         </div>
-        <div class="form-group">
+        <div class="f-group">
           <label>Dia Corte</label>
-          <input id="cCorte" type="number" value="${c ? c.diaCorte : ''}" placeholder="8" min="1" max="31">
+          <input type="number" id="fCartaoCorte" min="1" max="31" value="${c ? c.diaCorte : ''}" placeholder="3">
         </div>
       </div>
-      <div class="form-group">
+      <div class="f-group">
         <label>Cor</label>
-        <select id="cCor">
-          ${CONFIG.CORES.map(cor => `<option value="${cor}" ${c && c.cor === cor ? 'selected' : ''}>${cor}</option>`).join('')}
-        </select>
+        <input type="hidden" id="fCartaoCor" value="${corAtual}">
+        <div class="cor-picker">${pickers}</div>
       </div>
-    `, `
-      <button class="btn-secondary modal-close">Cancelar</button>
-      <button class="btn-primary" id="btnSalvarCartao"><i class="fas fa-save"></i> Salvar</button>
-    `);
-    document.getElementById('btnSalvarCartao').onclick = () => this.salvar(c);
-  },
+    `,
+    `
+      <button class="btn-sec" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-prim" onclick="salvarCartao(${c ? `'${c.id}'` : null})">Salvar</button>
+    `
+  );
+}
 
-  async salvar(c) {
-    const item = {
-      nome:       document.getElementById('cNome').value.trim(),
-      numero:     document.getElementById('cNumero').value.trim(),
-      limite:     document.getElementById('cLimite').value,
-      vencimento: document.getElementById('cVenc').value,
-      diaCorte:   document.getElementById('cCorte').value,
-      cor:        document.getElementById('cCor').value,
-    };
-    if (!item.nome || !item.numero) { UI.toast('Preencha nome e número', 'danger'); return; }
-    if (c) item.id = c.id;
-    UI.loading(true);
-    const res = c ? await API.editCartao(item) : await API.addCartao(item);
-    UI.loading(false);
-    if (!res.ok) { UI.toast(res.error, 'danger'); return; }
-    UI.fecharModal();
-    UI.toast(c ? 'Cartão atualizado!' : 'Cartão adicionado!', 'success');
-    await APP.reload();
-  },
+async function salvarCartao(id = null) {
+  const item = {
+    nome:       document.getElementById('fCartaoNome').value.trim(),
+    numero:     document.getElementById('fCartaoNumero').value.trim(),
+    limite:     document.getElementById('fCartaoLimite').value,
+    vencimento: document.getElementById('fCartaoVenc').value,
+    diaCorte:   document.getElementById('fCartaoCorte').value,
+    cor:        document.getElementById('fCartaoCor').value,
+  };
+  if (!item.nome) { toast('Informe o nome do cartão', 'erro'); return; }
+  loading(true);
+  let r;
+  if (id) {
+    item.id = id;
+    r = await api('editCartao', { item });
+  } else {
+    r = await api('addCartao', { item });
+  }
+  loading(false);
+  if (r.ok) {
+    fecharModal();
+    toast(id ? 'Cartão atualizado!' : 'Cartão adicionado!', 'ok');
+    await Dados.carregar();
+    renderCartoes(document.getElementById('appContent'));
+  } else {
+    toast(r.error, 'erro');
+  }
+}
 
-  deletar(id, nome) {
-    UI.confirmar(`Deletar cartão "${nome}"?`, async () => {
-      UI.loading(true);
-      const res = await API.deleteCartao(id);
-      UI.loading(false);
-      if (!res.ok) { UI.toast(res.error, 'danger'); return; }
-      UI.toast('Cartão removido', 'success');
-      await APP.reload();
-    });
-  },
-};
+async function deletarCartao(id) {
+  if (!confirm('Excluir este cartão?')) return;
+  loading(true);
+  const r = await api('deleteCartao', { id });
+  loading(false);
+  if (r.ok) {
+    toast('Cartão excluído!', 'ok');
+    await Dados.carregar();
+    renderCartoes(document.getElementById('appContent'));
+  } else {
+    toast(r.error, 'erro');
+  }
+}
