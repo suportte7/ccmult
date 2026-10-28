@@ -182,7 +182,7 @@ body {
 .page-header { padding: 4px 0 10px; }
 .page-header h2 { font-size: 1.2rem; margin: 0 0 2px; font-weight: 700; }
 .page-header p  { margin: 0; color: var(--text-light); font-size: 0.75rem; }
-.section-label  {
+.section-label {
   font-size: 0.65rem; letter-spacing: .08em; text-transform: uppercase;
   font-weight: 800; color: var(--primary); margin: 12px 0 6px;
 }
@@ -295,7 +295,7 @@ body {
 .tema-op.sel { border-color: var(--primary); color: var(--primary); }
 .tema-dot { width: 16px; height: 16px; border-radius: 50%; margin: 0 auto 4px; }
 
-/* TOAST */
+/* TOAST — usa classe .show (alinhado com o JS) */
 .toast {
   position: fixed; top: calc(60px + env(safe-area-inset-top));
   left: 50%; transform: translateX(-50%) translateY(-20px);
@@ -305,16 +305,15 @@ body {
   opacity: 0; transition: 0.3s; z-index: 300; pointer-events: none;
   white-space: nowrap; max-width: 90vw;
 }
-.toast.ativo { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast.erro  { border-color: var(--danger); color: var(--danger); }
 .toast.ok    { border-color: var(--success); color: var(--success); }
 
-/* LOADING */
+/* LOADING — controlado via style.display no JS */
 .loading-overlay {
   display: none; position: fixed; inset: 0; z-index: 500;
   background: rgba(0,0,0,0.5); align-items: center; justify-content: center;
 }
-.loading-overlay.ativo { display: flex; }
 .spinner {
   width: 40px; height: 40px; border-radius: 50%;
   border: 3px solid var(--border); border-top-color: var(--primary);
