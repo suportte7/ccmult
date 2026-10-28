@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ControlCard</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="telaLogin" class="tela ativa">
+    <div class="login-container">
+      <div class="login-logo">
+        <i class="fas fa-credit-card"></i>
+        <h1>ControlCard</h1>
+        <p>Controle de Cartões</p>
+      </div>
+      <form id="formLogin" class="login-form">
+        <div class="input-group">
+          <i class="fas fa-envelope"></i>
+          <input type="email" id="loginEmail" placeholder="Email" required autocomplete="email">
+        </div>
+        <div class="input-group">
+          <i class="fas fa-lock"></i>
+          <input type="password" id="loginSenha" placeholder="Senha" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-primary btn-full">
+          <i class="fas fa-sign-in-alt"></i> Entrar
+        </button>
+      </form>
+      <div class="login-footer">
+        <p>Não tem conta? <a href="#" id="btnShowRegister">Cadastre-se</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGISTRO -->
+  <div id="telaRegistro" class="tela">
+    <div class="login-container">
+      <div class="login-logo">
+        <i class="fas fa-user-plus"></i>
+        <h1>Cadastro</h1>
+      </div>
+      <form id="formRegistro" class="login-form">
+        <div class="input-group">
+          <i class="fas fa-user"></i>
+          <input type="text" id="regNome" placeholder="Seu nome" required>
+        </div>
+        <div class="input-group">
+          <i class="fas fa-envelope"></i>
+          <input type="email" id="regEmail" placeholder="Email" required>
+        </div>
+        <div class="input-group">
+          <i class="fas fa-lock"></i>
+          <input type="password" id="regSenha" placeholder="Senha (mín. 6 caracteres)" required minlength="6">
+        </div>
+        <button type="submit" class="btn-primary btn-full">
+          <i class="fas fa-user-plus"></i> Cadastrar
+        </button>
+      </form>
+      <div class="login-footer">
+        <p>Já tem conta? <a href="#" id="btnShowLogin">Fazer login</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP PRINCIPAL -->
+  <div id="telaApp" class="tela">
+    <header class="app-header">
+      <div class="header-left">
+        <h2 id="headerTitulo">ControlCard</h2>
+      </div>
+      <div class="header-right">
+        <span id="headerUserNome" class="user-badge"></span>
+        <button id="btnLogout" class="btn-icon" title="Sair">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
+      </div>
+    </header>
+
+    <nav class="app-nav" id="appNav">
+      <button class="nav-btn ativo" data-tela="dashboard">
+        <i class="fas fa-home"></i><span>Início</span>
+      </button>
+      <button class="nav-btn" data-tela="cartoes">
+        <i class="fas fa-credit-card"></i><span>Cartões</span>
+      </button>
+      <button class="nav-btn" data-tela="pessoas">
+        <i class="fas fa-users"></i><span>Pessoas</span>
+      </button>
+      <button class="nav-btn" data-tela="gastos">
+        <i class="fas fa-receipt"></i><span>Gastos</span>
+      </button>
+      <button class="nav-btn" data-tela="acordos">
+        <i class="fas fa-handshake"></i><span>Acordos</span>
+      </button>
+      <button class="nav-btn" data-tela="backup">
+        <i class="fas fa-cloud-download-alt"></i><span>Backup</span>
+      </button>
+      <button class="nav-btn nav-admin-btn" data-tela="admin" style="display:none">
+        <i class="fas fa-shield-alt"></i><span>Admin</span>
+      </button>
+    </nav>
+
+    <main id="appContent" class="app-content"></main>
+  </div>
+
+  <!-- LOADING -->
+  <div id="loading" class="loading-overlay" style="display:none">
+    <div class="spinner"></div>
+    <p>Aguarde...</p>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast"></div>
+
+  <!-- MODAL -->
+  <div id="modal" class="modal" style="display:none">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitulo"></h3>
+        <button class="btn-icon modal-close"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="modalBody" class="modal-body"></div>
+      <div id="modalFooter" class="modal-footer"></div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/cartoes.js"></script>
+  <script src="js/pessoas.js"></script>
+  <script src="js/gastos.js"></script>
+  <script src="js/acordos.js"></script>
+  <script src="js/backup.js"></script>
+  <script src="js/admin.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
