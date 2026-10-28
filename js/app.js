@@ -1,155 +1,129 @@
-// ============================================
-// app.js — Orquestrador principal
-// ============================================
-const APP = {
-  dados: { cartoes: [], pessoas: [], gastos: [], acordos: [], pagamentos: [] },
-  user:  null,
-  telaAtual: 'dashboard',
+// ================================================================
+// INICIALIZAÇÃO
+// ================================================================
+document.addEventListener('DOMContentLoaded', () => {
+  carregarTema();
+  iniciarApp();
+});
 
-  async iniciar(user) {
-    this.user = user;
-    mostrarTela('telaApp');
-    document.getElementById('headerUserNome').textContent = user.nome;
-    if (user.isAdmin) {
-      document.querySelector('.nav-admin-btn').style.display = 'flex';
-    }
-    this.bindNav();
-    await this.carregarDados();
-    this.renderTela('dashboard');
-  },
+async function iniciarApp() {
+  const logado = Auth.init();
+  if (logado) {
+    showTela('telaApp');
+    Dados.carregarLocal();
+    navegar('dashboard');
+    await Dados.carregar();
+    navegar('dashboard');
+  } else {
+    showTela('telaLogin');
+  }
+  bindEventos();
+}
 
-  async carregarDados() {
-    UI.loading(true);
-    const res = await API.getAllMyData();
-    UI.loading(false);
-    if (!res.ok) { UI.toast('Erro ao carregar dados: ' + res.error, 'danger'); return; }
-    this.dados = res;
-    // Processar juros automaticamente ao carregar
-    API.processarJuros();
-  },
+// ================================================================
+// EVENTOS
+// ================================================================
+function bindEventos() {
+  // Login
+  document.getElementById('btnLogin').addEventListener('click', fazerLogin);
+  document.getElementById('loginPin').addEventListener('keyup', e => {
+    if (e.key === 'Enter') fazerLogin();
+  });
 
-  bindNav() {
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('ativo'));
-        btn.classList.add('ativo');
-        this.renderTela(btn.dataset.tela);
-      });
-    });
-  },
+  // Registro
+  document.getElementById('btnShowReg').addEventListener('click', () => showTela('telaRegistro'));
+  document.getElementById('btnShowLogin').addEventListener('click', () => showTela('telaLogin'));
+  document.getElementById('btnRegistrar').addEventListener('click', fazerRegistro);
 
-  renderTela(tela) {
-    this.telaAtual = tela;
-    document.getElementById('headerTitulo').textContent = {
-      dashboard: 'ControlCard',
-      cartoes:   'Meus Cartões',
-      pessoas:   'Pessoas',
-      gastos:    'Gastos',
-      acordos:   'Acordos',
-      backup:    'Backup',
-      admin:     'Administração',
-    }[tela] || 'ControlCard';
+  // Reset PIN
+  document.getElementById('btnEsqueceuPin').addEventListener('click', () => showTela('telaReset'));
+  document.getElementById('btnVoltarLogin').addEventListener('click', () => showTela('telaLogin'));
+  document.getElementById('btnEnviarToken').addEventListener('click', enviarToken);
+  document.getElementById('btnConfirmarReset').addEventListener('click', confirmarReset);
 
-    const content = document.getElementById('appContent');
-    switch (tela) {
-      case 'dashboard': content.innerHTML = DASHBOARD.render(this.dados); break;
-      case 'cartoes':   CARTOES.render(this.dados.cartoes); break;
-      case 'pessoas':   PESSOAS.render(this.dados.pessoas, this.dados.cartoes); break;
-      case 'gastos':    GASTOS.render(this.dados.gastos, this.dados.pessoas, this.dados.cartoes); break;
-      case 'acordos':   ACORDOS.render(this.dados.acordos, this.dados.pessoas, this.dados.cartoes, this.dados.pagamentos); break;
-      case 'backup':    BACKUP.render(); break;
-      case 'admin':
-        if (this.user.isAdmin) ADMIN.render();
-        else UI.toast('Sem permissão', 'danger');
-        break;
-    }
-  },
+  // App
+  document.getElementById('btnLogout').addEventListener('click', fazerLogout);
+  document.getElementById('btnSync').addEventListener('click', sincronizar);
+  document.getElementById('btnTema').addEventListener('click', abrirTemas);
 
-  async reload() {
-    await this.carregarDados();
-    this.renderTela(this.telaAtual);
-  },
-};
+  // Dock
+  document.querySelectorAll('.dock-btn').forEach(btn => {
+    btn.addEventListener('click', () => navegar(btn.dataset.tela));
+  });
+}
 
-// --- DASHBOARD ---
-const DASHBOARD = {
-  render(dados) {
-    const totalCartoes  = dados.cartoes.length;
-    const totalPessoas  = dados.pessoas.length;
-    const totalGastos   = dados.gastos.reduce((s, g) => s + parseFloat(g.valor || 0), 0);
-    const acordosAbertos= dados.acordos.filter(a => a.status !== 'quitado' && a.status !== 'cancelado');
-    const totalAcordos  = acordosAbertos.reduce((s, a) => s + parseFloat(a.valorAtual || 0), 0);
+// ================================================================
+// AUTH
+// ================================================================
+async function fazerLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pin   = document.getElementById('loginPin').value.trim();
+  if (!email || !pin) return toast('Preencha email e PIN', 'erro');
+  if (pin.length !== 4) return toast('PIN deve ter 4 dígitos', 'erro');
+  loading(true);
+  const r = await api('login', { email, senha: pin });
+  loading(false);
+  if (!r.ok) return toast(r.error, 'erro');
+  Auth.salvar(r.token, r.user);
+  showTela('telaApp');
+  Dados.carregarLocal();
+  navegar('dashboard');
+  await Dados.carregar();
+  navegar('dashboard');
+}
 
-    return `
-      <div class="stats-grid">
-        <div class="stat-card">
-          <i class="fas fa-credit-card"></i>
-          <div class="stat-valor">${totalCartoes}</div>
-          <div class="stat-label">Cartões</div>
-        </div>
-        <div class="stat-card">
-          <i class="fas fa-users"></i>
-          <div class="stat-valor">${totalPessoas}</div>
-          <div class="stat-label">Pessoas</div>
-        </div>
-        <div class="stat-card">
-          <i class="fas fa-receipt"></i>
-          <div class="stat-valor">${UI.moeda(totalGastos)}</div>
-          <div class="stat-label">Total Gastos</div>
-        </div>
-        <div class="stat-card">
-          <i class="fas fa-handshake"></i>
-          <div class="stat-valor">${UI.moeda(totalAcordos)}</div>
-          <div class="stat-label">Acordos em Aberto</div>
-        </div>
-      </div>
+async function fazerRegistro() {
+  const nome  = document.getElementById('regNome').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pin   = document.getElementById('regPin').value.trim();
+  if (!nome || !email || !pin) return toast('Preencha todos os campos', 'erro');
+  if (pin.length !== 4) return toast('PIN deve ter 4 dígitos', 'erro');
+  loading(true);
+  const r = await api('register', { email, senha: pin, nome });
+  loading(false);
+  if (!r.ok) return toast(r.error, 'erro');
+  toast('Conta criada! Faça login.', 'ok');
+  showTela('telaLogin');
+}
 
-      <div class="section-header">
-        <h2>Acordos Vencidos</h2>
-      </div>
-      ${this.acordosVencidos(dados)}
+async function enviarToken() {
+  const email = document.getElementById('resetEmail').value.trim();
+  if (!email) return toast('Digite seu email', 'erro');
+  loading(true);
+  const r = await api('solicitarReset', { email });
+  loading(false);
+  if (!r.ok) return toast(r.error, 'erro');
+  toast('Token enviado para seu email!', 'ok');
+  document.getElementById('resetStep1').style.display = 'none';
+  document.getElementById('resetStep2').style.display = 'block';
+}
 
-      <div class="section-header" style="margin-top:20px">
-        <h2>Últimos Gastos</h2>
-      </div>
-      ${this.ultimosGastos(dados)}
-    `;
-  },
+async function confirmarReset() {
+  const email  = document.getElementById('resetEmail').value.trim();
+  const token  = document.getElementById('resetToken').value.trim().toUpperCase();
+  const novoPin = document.getElementById('resetNovoPin').value.trim();
+  if (!token || !novoPin) return toast('Preencha token e novo PIN', 'erro');
+  if (novoPin.length !== 4) return toast('PIN deve ter 4 dígitos', 'erro');
+  loading(true);
+  const r = await api('confirmarReset', { email, token, novoPin });
+  loading(false);
+  if (!r.ok) return toast(r.error, 'erro');
+  toast('PIN redefinido! Faça login.', 'ok');
+  showTela('telaLogin');
+}
 
-  acordosVencidos(dados) {
-    const vencidos = dados.acordos.filter(a => a.status === 'vencido');
-    if (!vencidos.length) return `<p style="color:var(--text3);font-size:14px">Nenhum acordo vencido ✅</p>`;
-    return vencidos.map(a => {
-      const p = dados.pessoas.find(x => x.id === a.pessoaId);
-      return `<div class="card">
-        <div class="card-header">
-          <h3>${a.descricao}</h3>${UI.badge('vencido')}
-        </div>
-        <div class="card-body">
-          <p><strong>${p ? p.nome : '-'}</strong> · Saldo: <span class="valor valor-neg">${UI.moeda(a.valorAtual)}</span></p>
-          <p>Venceu em ${UI.data(a.dataVenc)}</p>
-        </div>
-      </div>`;
-    }).join('');
-  },
+function fazerLogout() {
+  Auth.logout();
+  Dados.limpar();
+  showTela('telaLogin');
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPin').value = '';
+}
 
-  ultimosGastos(dados) {
-    const ultimos = [...dados.gastos].slice(-5).reverse();
-    if (!ultimos.length) return `<p style="color:var(--text3);font-size:14px">Nenhum gasto registrado</p>`;
-    return ultimos.map(g => {
-      const p = dados.pessoas.find(x => x.id === g.pessoaId);
-      return `<div class="card">
-        <div class="card-header">
-          <h3>${g.descricao}</h3>
-          <span class="valor valor-neg">${UI.moeda(g.valor)}</span>
-        </div>
-        <div class="card-body">
-          <p>${p ? p.nome : '-'} · ${UI.data(g.data)}</p>
-        </div>
-      </div>`;
-    }).join('');
-  },
-};
-
-// Inicializar ao carregar página
-document.addEventListener('DOMContentLoaded', () => Auth.init());
+async function sincronizar() {
+  loading(true);
+  await Dados.carregar();
+  loading(false);
+  toast('Dados sincronizados!', 'ok');
+  navegar(document.querySelector('.dock-btn.ativo')?.dataset.tela || 'dashboard');
+}
