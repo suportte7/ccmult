@@ -1,102 +1,143 @@
-// ============================================
-// pessoas.js
-// ============================================
-const PESSOAS = {
-  render(pessoas, cartoes) {
-    const content = document.getElementById('appContent');
-    content.innerHTML = `
-      <div class="section-header">
-        <h2>Pessoas</h2>
-        <button class="btn-primary btn-small" id="btnAddPessoa">
-          <i class="fas fa-plus"></i> Nova
-        </button>
-      </div>
-      <div id="listaPessoas"></div>
-    `;
-    document.getElementById('btnAddPessoa').onclick = () => this.form(null, cartoes);
-    this.renderLista(pessoas, cartoes);
-  },
+function renderPessoas(el) {
+  el.innerHTML = `
+    <div class="page-header">
+      <h2>Pessoas</h2>
+      <p>${Dados.pessoas.length} pessoa(s) cadastrada(s)</p>
+    </div>
+    <div id="listaPessoas">${listarPessoas()}</div>
+  `;
+  let fab = document.getElementById('fab');
+  if (!fab) {
+    fab = document.createElement('button');
+    fab.className = 'fab';
+    fab.id = 'fab';
+    document.body.appendChild(fab);
+  }
+  fab.innerHTML = '+';
+  fab.onclick = () => modalPessoa();
+}
 
-  renderLista(pessoas, cartoes) {
-    const lista = document.getElementById('listaPessoas');
-    if (!pessoas.length) {
-      lista.innerHTML = `<div class="section-empty"><i class="fas fa-users"></i><p>Nenhuma pessoa ainda</p></div>`;
-      return;
-    }
-    lista.innerHTML = pessoas.map(p => {
-      const c = cartoes.find(x => x.id === p.cartaoId);
-      return `<div class="card">
-        <div class="card-header">
-          <h3><i class="fas fa-user" style="color:var(--primary);margin-right:8px"></i>${p.nome}</h3>
-          <div class="btn-group">
-            <button class="btn-icon" onclick="PESSOAS.form(${JSON.stringify(p).replace(/"/g,'&quot;')}, APP.dados.cartoes)">
-              <i class="fas fa-edit"></i>
+function listarPessoas() {
+  if (!Dados.pessoas.length) return '<p class="vazio">Nenhuma pessoa cadastrada.</p>';
+  return Dados.pessoas.map(p => {
+    const cartao = Dados.cartoes.find(c => c.id === p.cartaoId);
+    const gastosPessoa = Dados.gastos.filter(g => g.pessoaId === p.id);
+    const totalGastos  = gastosPessoa.reduce((s, g) => s + (parseFloat(g.valor) || 0), 0);
+    const acordosPessoa = Dados.acordos.filter(a => a.pessoaId === p.id && a.status !== 'quitado' && a.status !== 'cancelado');
+    const totalAcordos  = acordosPessoa.reduce((s, a) => s + (parseFloat(a.valorAtual) || 0), 0);
+    return `
+      <div class="tree-card">
+        <div class="tree-header" onclick="this.parentElement.classList.toggle('open')">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="avatar">${p.nome.charAt(0).toUpperCase()}</div>
+            <div class="t-desc">
+              <strong>${p.nome}</strong>
+              <span>${cartao ? cartao.nome : 'Sem cartão'} ${p.telefone ? '· ' + p.telefone : ''}</span>
+            </div>
+          </div>
+          <span class="material-icons-outlined" style="font-size:1rem;color:var(--text-light)">expand_more</span>
+        </div>
+        <div class="tree-body">
+          <div style="display:flex;gap:8px;padding:4px 0">
+            <div class="metric" style="flex:1">
+              <small>Gastos</small>
+              <strong>${fmt(totalGastos)}</strong>
+            </div>
+            <div class="metric" style="flex:1">
+              <small>Acordos</small>
+              <strong>${fmt(totalAcordos)}</strong>
+            </div>
+          </div>
+          ${p.observacao ? `<p class="helper" style="margin-top:8px">${p.observacao}</p>` : ''}
+          <div class="modal-acoes" style="margin-top:8px">
+            <button class="btn-sec" onclick="modalPessoa('${p.id}')">
+              <span class="material-icons-outlined" style="font-size:0.9rem;vertical-align:middle">edit</span>
+              Editar
             </button>
-            <button class="btn-icon" onclick="PESSOAS.deletar('${p.id}','${p.nome}')">
-              <i class="fas fa-trash"></i>
+            <button class="btn-danger" onclick="deletarPessoa('${p.id}')">
+              <span class="material-icons-outlined" style="font-size:0.9rem;vertical-align:middle">delete</span>
+              Excluir
             </button>
           </div>
         </div>
-        <div class="card-body">
-          <p>Cartão: <strong>${c ? c.nome : 'Não vinculado'}</strong></p>
-          ${p.telefone ? `<p>Tel: ${p.telefone}</p>` : ''}
-          ${p.observacao ? `<p>${p.observacao}</p>` : ''}
-        </div>
-      </div>`;
-    }).join('');
-  },
+      </div>
+    `;
+  }).join('');
+}
 
-  form(p, cartoes) {
-    UI.modal(p ? 'Editar Pessoa' : 'Nova Pessoa', `
-      <div class="form-group">
+function modalPessoa(id = null) {
+  const p = id ? Dados.pessoas.find(x => x.id === id) : null;
+  const optsCartao = Dados.cartoes.map(c => `
+    <option value="${c.id}" ${p && p.cartaoId === c.id ? 'selected' : ''}>${c.nome}</option>
+  `).join('');
+
+  abrirModal(
+    p ? 'Editar Pessoa' : 'Nova Pessoa',
+    `
+      <div class="f-group">
         <label>Nome</label>
-        <input id="pNome" type="text" value="${p ? p.nome : ''}" placeholder="Nome da pessoa">
+        <input type="text" id="fPessoaNome" value="${p ? p.nome : ''}" placeholder="Ex: Esposa">
       </div>
-      <div class="form-group">
+      <div class="f-group">
         <label>Cartão vinculado</label>
-        <select id="pCartao">${UI.selectCartoes(cartoes, p ? p.cartaoId : '')}</select>
+        <select id="fPessoaCartao">
+          <option value="">Nenhum</option>
+          ${optsCartao}
+        </select>
       </div>
-      <div class="form-group">
-        <label>Telefone (opcional)</label>
-        <input id="pTel" type="tel" value="${p ? p.telefone || '' : ''}" placeholder="(00) 00000-0000">
+      <div class="f-group">
+        <label>Telefone</label>
+        <input type="tel" id="fPessoaTel" value="${p ? p.telefone || '' : ''}" placeholder="(11) 99999-9999">
       </div>
-      <div class="form-group">
-        <label>Observação (opcional)</label>
-        <textarea id="pObs">${p ? p.observacao || '' : ''}</textarea>
+      <div class="f-group">
+        <label>Observação</label>
+        <textarea id="fPessoaObs" rows="2" placeholder="Opcional...">${p ? p.observacao || '' : ''}</textarea>
       </div>
-    `, `
-      <button class="btn-secondary modal-close">Cancelar</button>
-      <button class="btn-primary" id="btnSalvarPessoa"><i class="fas fa-save"></i> Salvar</button>
-    `);
-    document.getElementById('btnSalvarPessoa').onclick = () => this.salvar(p);
-  },
+    `,
+    `
+      <button class="btn-sec" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-prim" onclick="salvarPessoa(${p ? `'${p.id}'` : null})">Salvar</button>
+    `
+  );
+}
 
-  async salvar(p) {
-    const item = {
-      nome:      document.getElementById('pNome').value.trim(),
-      cartaoId:  document.getElementById('pCartao').value,
-      telefone:  document.getElementById('pTel').value.trim(),
-      observacao:document.getElementById('pObs').value.trim(),
-    };
-    if (!item.nome) { UI.toast('Informe o nome', 'danger'); return; }
-    if (p) item.id = p.id;
-    UI.loading(true);
-    const res = p ? await API.editPessoa(item) : await API.addPessoa(item);
-    UI.loading(false);
-    if (!res.ok) { UI.toast(res.error, 'danger'); return; }
-    UI.fecharModal();
-    UI.toast(p ? 'Pessoa atualizada!' : 'Pessoa adicionada!', 'success');
-    await APP.reload();
-  },
+async function salvarPessoa(id = null) {
+  const item = {
+    nome:       document.getElementById('fPessoaNome').value.trim(),
+    cartaoId:   document.getElementById('fPessoaCartao').value,
+    telefone:   document.getElementById('fPessoaTel').value.trim(),
+    observacao: document.getElementById('fPessoaObs').value.trim(),
+  };
+  if (!item.nome) { toast('Informe o nome', 'erro'); return; }
+  loading(true);
+  let r;
+  if (id) {
+    item.id = id;
+    r = await api('editPessoa', { item });
+  } else {
+    r = await api('addPessoa', { item });
+  }
+  loading(false);
+  if (r.ok) {
+    fecharModal();
+    toast(id ? 'Pessoa atualizada!' : 'Pessoa adicionada!', 'ok');
+    await Dados.carregar();
+    renderPessoas(document.getElementById('appContent'));
+  } else {
+    toast(r.error, 'erro');
+  }
+}
 
-  deletar(id, nome) {
-    UI.confirmar(`Deletar "${nome}"?`, async () => {
-      UI.loading(true);
-      const res = await API.deletePessoa(id);
-      UI.loading(false);
-      if (!res.ok) { UI.toast(res.error, 'danger'); return; }
-      UI.toast('Pessoa removida', 'success');
-      await APP.reload();
-    });
-  },
-};
+async function deletarPessoa(id) {
+  if (!confirm('Excluir esta pessoa?')) return;
+  loading(true);
+  const r = await api('deletePessoa', { id });
+  loading(false);
+  if (r.ok) {
+    toast('Pessoa excluída!', 'ok');
+    await Dados.carregar();
+    renderPessoas(document.getElementById('appContent'));
+  } else {
+    toast(r.error, 'erro');
+  }
+}
